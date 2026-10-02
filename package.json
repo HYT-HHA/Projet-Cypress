@@ -1,0 +1,27 @@
+{
+  "name": "mon-projet-cypress",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "cy:open": "cypress open --e2e",
+    "cy:run": "cypress run --e2e",
+    "cy:run:features": "cypress run --e2e --spec \"cypress/features/**/*.feature\"",
+    "test": "cypress run --e2e"
+  },
+  "cypress-cucumber-preprocessor": {
+    "stepDefinitions": [
+      "cypress/step_definitions/**/*.{js,ts}"
+    ]
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@badeball/cypress-cucumber-preprocessor": "^28.0.0",
+    "@bahmutov/cypress-esbuild-preprocessor": "^2.2.8",
+    "cypress": "^16.1.0",
+    "esbuild": "^0.28.2"
+  }
+}

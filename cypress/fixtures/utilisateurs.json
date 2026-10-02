@@ -1,0 +1,6 @@
+{
+  "standard": { "identifiant": "standard_user" },
+  "bloqué": { "identifiant": "locked_out_user" },
+  "mot de passe incorrect": { "identifiant": "standard_user", "motDePasse": "mauvais_mot_de_passe" },
+  "sans identifiant": { "identifiant": "" }
+}
