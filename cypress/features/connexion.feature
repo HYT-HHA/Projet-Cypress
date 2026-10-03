@@ -1,10 +1,11 @@
 # language: fr
+@connexion
 Fonctionnalité: Connexion
 
   Contexte:
     Étant donné que je suis sur la page de connexion
 
-  @passant
+  @smoke @passant
   Scénario: Connexion réussie
     Quand je me connecte avec le profil "standard"
     Alors je suis sur la page des produits
