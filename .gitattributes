@@ -1,0 +1,7 @@
+# Fins de ligne : LF pour tous les fichiers texte, quel que soit le système (Windows, Mac, Linux)
+* text=auto eol=lf
+
+# Fichiers binaires : jamais modifiés par Git
+*.png binary
+*.jpg binary
+*.mp4 binary
