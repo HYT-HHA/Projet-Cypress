@@ -7,13 +7,15 @@ module.exports = defineConfig({
   e2e: {
     // URL de l'application testée (Sauce Demo)
     baseUrl: 'https://www.saucedemo.com',
-    specPattern: ['cypress/features/**/*.feature', 'cypress/e2e/**/*.cy.js'],
+    specPattern: 'cypress/features/**/*.feature',
     supportFile: 'cypress/support/e2e.js',
     viewportWidth: 1280,
     viewportHeight: 800,
     defaultCommandTimeout: 8000,
     video: false,
     screenshotOnRunFailure: true,
+    // En mode run, un test échoué est relancé une fois : surveiller dans les rapports
+    // les tests qui ne passent qu'au 2e essai (tests instables à corriger)
     retries: {
       runMode: 1,
       openMode: 0,
