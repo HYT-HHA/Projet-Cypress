@@ -28,7 +28,7 @@ Règles :
 - Ne redéfinis pas une phrase qui existe déjà dans un autre fichier de steps
 - Chaque step appelle une méthode du Page Object [page]Page (nom en français), qui n'existe pas encore : liste-moi les méthodes nécessaires
 - Les libellés métier sont traduits en vraies valeurs via cypress/fixtures/[fichier].json
-- Les secrets (mots de passe) sont lus avec Cypress.env(), stockés dans cypress.env.json
+- Les secrets (mots de passe) sont lus avec cy.env() (Cypress.env() n'existe plus depuis Cypress 16), stockés dans cypress.env.json
 - Ne code pas la page. Attends ma validation.
 ```
 

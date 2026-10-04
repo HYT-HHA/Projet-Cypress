@@ -1,12 +1,12 @@
 {
   "name": "mon-projet-cypress",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Tests automatisés Cypress + Cucumber (Gherkin en français)",
+  "private": true,
   "scripts": {
-    "cy:open": "cypress open --e2e",
-    "test": "cypress run --e2e",
-    "test:smoke": "cypress run --e2e --expose tags=@smoke"
+    "cy:open": "cypress open --e2e --browser chrome",
+    "test": "cypress run --e2e --browser chrome",
+    "test:smoke": "cypress run --e2e --browser chrome --expose tags=@smoke"
   },
   "cypress-cucumber-preprocessor": {
     "stepDefinitions": [

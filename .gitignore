@@ -1,4 +1,11 @@
+# Dépendances
 node_modules/
+
+# Secrets (modèle à copier : cypress.env.example.json)
 cypress.env.json
+
+# Fichiers générés par Cypress à chaque lancement
 cypress/screenshots/
 cypress/videos/
+cypress/downloads/
+cypress/reports/
