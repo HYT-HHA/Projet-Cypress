@@ -8,4 +8,8 @@ cypress.env.json
 cypress/screenshots/
 cypress/videos/
 cypress/downloads/
-cypress/reports/
+
+# Rapports Allure : résultats bruts, rapport HTML et historique (propres à chaque machine)
+allure-results/
+allure-report/
+allure-history/
