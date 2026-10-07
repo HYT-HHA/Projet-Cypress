@@ -1,0 +1,8 @@
+{
+  "recette": {
+    "baseUrl": "https://www.saucedemo.com"
+  },
+  "preprod": {
+    "baseUrl": "https://www.saucedemo.com"
+  }
+}

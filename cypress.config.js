@@ -4,11 +4,12 @@ const { addCucumberPreprocessorPlugin } = require('@badeball/cypress-cucumber-pr
 const { createEsbuildPlugin } = require('@badeball/cypress-cucumber-preprocessor/esbuild');
 const { allureCypress } = require('allure-cypress/reporter');
 const cypressOnFix = require('cypress-on-fix');
+const environnements = require('./cypress/config/environnements.json');
+
+const ENVIRONNEMENT_PAR_DEFAUT = 'recette';
 
 module.exports = defineConfig({
   e2e: {
-    // URL de l'application testée (Sauce Demo)
-    baseUrl: 'https://www.saucedemo.com',
     specPattern: 'cypress/features/**/*.feature',
     supportFile: 'cypress/support/e2e.js',
     viewportWidth: 1280,
@@ -23,6 +24,18 @@ module.exports = defineConfig({
       openMode: 0,
     },
     async setupNodeEvents(cypressOn, config) {
+      // Choix de l'environnement : --expose environnement=preprod (recette par défaut).
+      // Un nom inconnu arrête tout, pour ne jamais tester le mauvais site sans le savoir.
+      const nomEnvironnement = config.expose?.environnement ?? ENVIRONNEMENT_PAR_DEFAUT;
+      const environnement = environnements[nomEnvironnement];
+      if (!environnement) {
+        throw new Error(
+          `Environnement inconnu : « ${nomEnvironnement} ». ` +
+            `Environnements disponibles : ${Object.keys(environnements).join(', ')}.`,
+        );
+      }
+      config.baseUrl = environnement.baseUrl;
+
       // Permet à Cucumber et Allure d'écouter les mêmes événements sans s'écraser
       const on = cypressOnFix(cypressOn);
 
@@ -38,6 +51,11 @@ module.exports = defineConfig({
 
       allureCypress(on, config, {
         resultsDir: 'allure-results',
+        // Affiché dans le rapport : on sait toujours sur quel environnement les tests ont tourné
+        environmentInfo: {
+          environnement: nomEnvironnement,
+          url: environnement.baseUrl,
+        },
       });
 
       return config;
