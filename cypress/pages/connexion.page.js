@@ -16,7 +16,9 @@ class ConnexionPage {
       cy.get(this.selecteurs.identifiant).type(identifiant);
     }
     if (motDePasse) {
-      cy.get(this.selecteurs.motDePasse).type(motDePasse, { log: false });
+      // log: false sur get ET type : sinon le mot de passe apparaît dans le journal Cypress
+      // et dans le rapport Allure (le HTML du champ contient sa valeur)
+      cy.get(this.selecteurs.motDePasse, { log: false }).type(motDePasse, { log: false });
     }
     cy.get(this.selecteurs.boutonConnexion).click();
   }
