@@ -31,7 +31,9 @@ concurrency:
 jobs:
   tests:
     name: Tests (${{ inputs.environnement || 'recette' }})
-    runs-on: ubuntu-latest
+    # Version d'Ubuntu fixée (pas « ubuntu-latest ») : on choisit quand migrer,
+    # après avoir testé, au lieu de subir les changements de GitHub
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
 
     env:
@@ -108,7 +110,7 @@ jobs:
     needs: tests
     # Publié même si des tests ont échoué, mais seulement pour la recette
     if: ${{ !cancelled() && (inputs.environnement || 'recette') == 'recette' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
 
     # Droits nécessaires uniquement pour publier sur GitHub Pages
@@ -140,7 +142,7 @@ jobs:
     # Envoyé à chaque exécution, réussie ou non (pour n'alerter qu'en cas d'échec :
     # remplacer par « needs.tests.result == 'failure' »)
     if: ${{ !cancelled() }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
 
     env:
