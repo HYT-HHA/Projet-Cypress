@@ -125,7 +125,47 @@ jobs:
       name: github-pages
       url: ${{ steps.deploiement.outputs.page_url }}
 
+    # Adresse du rapport publié, transmise au job « notification »
+    outputs:
+      url_rapport: ${{ steps.deploiement.outputs.page_url }}
+
     steps:
       - name: Publier le rapport sur GitHub Pages
         id: deploiement
         uses: actions/deploy-pages@v5
+
+  notification:
+    name: Notification par e-mail
+    needs: [tests, publication]
+    # Envoyé à chaque exécution, réussie ou non (pour n'alerter qu'en cas d'échec :
+    # remplacer par « needs.tests.result == 'failure' »)
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    env:
+      ENVIRONNEMENT: ${{ inputs.environnement || 'recette' }}
+      RESULTAT: ${{ needs.tests.result == 'success' && '✅ Réussite' || '❌ Échec' }}
+
+    steps:
+      # Action tierce : épinglée sur un commit précis (v22) plutôt que sur une étiquette,
+      # car elle manipule un secret. Une étiquette peut être déplacée, pas un commit.
+      - name: Envoyer le résultat par e-mail
+        uses: dawidd6/action-send-mail@67ce3558d613188179559c61d3565140cf389968 # v22
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: qa.automation.fr@gmail.com
+          password: ${{ secrets.GMAIL_MOT_DE_PASSE }}
+          from: Tests Cypress <qa.automation.fr@gmail.com>
+          to: qa.automation.fr@gmail.com
+          subject: '${{ env.RESULTAT }} - Tests Cypress (${{ env.ENVIRONNEMENT }})'
+          body: |
+            Résultat : ${{ env.RESULTAT }}
+            Environnement : ${{ env.ENVIRONNEMENT }}
+            Déclencheur : ${{ github.event_name }}
+            Commit : ${{ github.sha }}
+
+            Rapport Allure : ${{ env.ENVIRONNEMENT == 'recette' && needs.publication.outputs.url_rapport || 'à télécharger dans le détail de l''exécution (Artifacts)' }}
+            Détail de l'exécution : ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
