@@ -1,0 +1,131 @@
+# Lancement automatique des tests Cypress sur GitHub Actions
+name: Tests Cypress
+
+on:
+  # À chaque envoi de code sur la branche main
+  push:
+    branches: [main]
+
+  # Manuellement, depuis l'onglet Actions (bouton « Run workflow »)
+  workflow_dispatch:
+    inputs:
+      environnement:
+        description: Environnement à tester
+        type: choice
+        options: [recette, preprod]
+        default: recette
+
+  # Chaque jour à 4 h UTC (6 h en été, 5 h en hiver à Paris)
+  schedule:
+    - cron: '0 4 * * *'
+
+# Droits minimum : le workflow ne fait que lire le code
+permissions:
+  contents: read
+
+# Si une nouvelle exécution démarre, la précédente encore en cours est annulée
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: Tests (${{ inputs.environnement || 'recette' }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      # Push et planification : recette ; lancement manuel : l'environnement choisi
+      ENVIRONNEMENT: ${{ inputs.environnement || 'recette' }}
+      # Adresse du rapport publié sur GitHub Pages (seul le rapport de recette y est publié)
+      URL_RAPPORT: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+
+    steps:
+      - name: Récupérer le code du projet
+        uses: actions/checkout@v7
+
+      - name: Installer Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Installer les dépendances
+        run: npm ci
+
+      # Installation explicite du navigateur de Cypress, pour ne pas dépendre
+      # des scripts d'installation automatiques de npm
+      - name: Installer Cypress
+        run: npx cypress install
+
+      - name: Lancer les tests
+        run: npm run test:${{ env.ENVIRONNEMENT }}
+        env:
+          # Le secret GitHub est transmis à Cypress, qui le lit avec cy.env(['motDePasse'])
+          CYPRESS_motDePasse: ${{ secrets.MOT_DE_PASSE }}
+
+      # Les étapes suivantes tournent même si des tests ont échoué (!cancelled()) :
+      # c'est justement quand il y a des échecs que le rapport est le plus utile.
+
+      # L'historique est stocké avec le rapport publié : on le récupère avant de générer
+      # le nouveau rapport. Au tout premier lancement, il n'existe pas encore.
+      - name: Récupérer l'historique du rapport (recette)
+        if: ${{ !cancelled() && env.ENVIRONNEMENT == 'recette' }}
+        run: |
+          mkdir -p allure-history
+          curl --fail --silent --show-error --location "$URL_RAPPORT/history.jsonl" \
+            --output allure-history/history.jsonl \
+            || { rm -f allure-history/history.jsonl; echo "Pas d'historique précédent (premier lancement)"; }
+
+      - name: Générer le rapport Allure
+        if: ${{ !cancelled() }}
+        run: |
+          npm run report:generate
+          # L'historique est publié avec le rapport, pour être récupéré au prochain lancement
+          if [ -f allure-history/history.jsonl ]; then
+            cp allure-history/history.jsonl allure-report/history.jsonl
+          fi
+
+      # Recette : le rapport est préparé pour GitHub Pages (job « publication » ci-dessous)
+      - name: Préparer la publication du rapport (recette)
+        if: ${{ !cancelled() && env.ENVIRONNEMENT == 'recette' }}
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: allure-report
+
+      # Autres environnements : le rapport est téléchargeable dans le résumé de l'exécution,
+      # pour ne pas mélanger leur historique avec celui de la recette
+      - name: Joindre le rapport à l'exécution (${{ env.ENVIRONNEMENT }})
+        if: ${{ !cancelled() && env.ENVIRONNEMENT != 'recette' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: rapport-allure-${{ env.ENVIRONNEMENT }}
+          path: allure-report
+          retention-days: 30
+
+  publication:
+    name: Publication du rapport
+    needs: tests
+    # Publié même si des tests ont échoué, mais seulement pour la recette
+    if: ${{ !cancelled() && (inputs.environnement || 'recette') == 'recette' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    # Droits nécessaires uniquement pour publier sur GitHub Pages
+    permissions:
+      pages: write
+      id-token: write
+
+    # Deux publications ne doivent jamais se chevaucher
+    concurrency:
+      group: publication-rapport
+      cancel-in-progress: false
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deploiement.outputs.page_url }}
+
+    steps:
+      - name: Publier le rapport sur GitHub Pages
+        id: deploiement
+        uses: actions/deploy-pages@v5
