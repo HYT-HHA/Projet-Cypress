@@ -9,6 +9,8 @@
     "test": "cypress run --e2e --browser chrome",
     "pretest:smoke": "npm run clean:results",
     "test:smoke": "cypress run --e2e --browser chrome --expose tags=@smoke",
+    "pretest:parcours": "npm run clean:results",
+    "test:parcours": "cypress run --e2e --browser chrome --expose tags=@parcours",
     "pretest:recette": "npm run clean:results",
     "test:recette": "cypress run --e2e --browser chrome --expose environnement=recette",
     "pretest:preprod": "npm run clean:results",

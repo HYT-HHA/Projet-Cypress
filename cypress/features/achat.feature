@@ -1,5 +1,5 @@
 # language: fr
-@achat
+@achat @parcours
 Fonctionnalité: Achat
 
   @passant
