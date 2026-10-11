@@ -1,12 +1,18 @@
 // Fonctions communes pour lire les données de test (fixtures), partagées entre les steps.
 
-// Traduit un libellé métier (ex. « sac à dos ») en produit réel du site :
-// { nom, identifiant }. Un libellé absent de produits.json arrête le test avec un message clair.
-export const avecProduit = (libelle, action) => {
-  cy.fixture('produits').then((produits) => {
-    if (!produits[libelle]) {
-      throw new Error(`Produit inconnu dans produits.json : « ${libelle} »`);
+// Traduit un libellé métier en donnée réelle lue dans une fixture.
+// Un libellé absent de la fixture arrête le test avec un message clair.
+const avecDonnee = (fixture, libelle, action) => {
+  cy.fixture(fixture).then((donnees) => {
+    if (!donnees[libelle]) {
+      throw new Error(`Libellé inconnu dans ${fixture}.json : « ${libelle} »`);
     }
-    action(produits[libelle]);
+    action(donnees[libelle]);
   });
 };
+
+// « sac à dos » → { nom, identifiant }
+export const avecProduit = (libelle, action) => avecDonnee('produits', libelle, action);
+
+// « client standard » → { prenom, nom, codePostal }
+export const avecClient = (libelle, action) => avecDonnee('clients', libelle, action);
