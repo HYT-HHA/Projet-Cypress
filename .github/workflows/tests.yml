@@ -6,6 +6,10 @@ on:
   push:
     branches: [main]
 
+  # À chaque Pull Request vers main : tests seulement (ni publication, ni e-mail)
+  pull_request:
+    branches: [main]
+
   # Manuellement, depuis l'onglet Actions (bouton « Run workflow »)
   workflow_dispatch:
     inputs:
@@ -72,7 +76,7 @@ jobs:
       # L'historique est stocké avec le rapport publié : on le récupère avant de générer
       # le nouveau rapport. Au tout premier lancement, il n'existe pas encore.
       - name: Récupérer l'historique du rapport (recette)
-        if: ${{ !cancelled() && env.ENVIRONNEMENT == 'recette' }}
+        if: ${{ !cancelled() && env.ENVIRONNEMENT == 'recette' && github.event_name != 'pull_request' }}
         run: |
           mkdir -p allure-history
           curl --fail --silent --show-error --location "$URL_RAPPORT/history.jsonl" \
@@ -90,26 +94,27 @@ jobs:
 
       # Recette : le rapport est préparé pour GitHub Pages (job « publication » ci-dessous)
       - name: Préparer la publication du rapport (recette)
-        if: ${{ !cancelled() && env.ENVIRONNEMENT == 'recette' }}
+        if: ${{ !cancelled() && env.ENVIRONNEMENT == 'recette' && github.event_name != 'pull_request' }}
         uses: actions/upload-pages-artifact@v5
         with:
           path: allure-report
 
-      # Autres environnements : le rapport est téléchargeable dans le résumé de l'exécution,
-      # pour ne pas mélanger leur historique avec celui de la recette
+      # Autres environnements et Pull Requests : le rapport est téléchargeable dans le résumé
+      # de l'exécution, pour ne pas mélanger leur historique avec celui de la recette
       - name: Joindre le rapport à l'exécution (${{ env.ENVIRONNEMENT }})
-        if: ${{ !cancelled() && env.ENVIRONNEMENT != 'recette' }}
+        if: ${{ !cancelled() && (env.ENVIRONNEMENT != 'recette' || github.event_name == 'pull_request') }}
         uses: actions/upload-artifact@v7
         with:
-          name: rapport-allure-${{ env.ENVIRONNEMENT }}
+          # Pull Request : « rapport-allure-pr-<numéro> » ; sinon : « rapport-allure-<environnement> »
+          name: rapport-allure-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.number) || env.ENVIRONNEMENT }}
           path: allure-report
           retention-days: 30
 
   publication:
     name: Publication du rapport
     needs: tests
-    # Publié même si des tests ont échoué, mais seulement pour la recette
-    if: ${{ !cancelled() && (inputs.environnement || 'recette') == 'recette' }}
+    # Publié même si des tests ont échoué, mais seulement pour la recette, hors Pull Request
+    if: ${{ !cancelled() && (inputs.environnement || 'recette') == 'recette' && github.event_name != 'pull_request' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
 
@@ -139,9 +144,9 @@ jobs:
   notification:
     name: Notification par e-mail
     needs: [tests, publication]
-    # Envoyé à chaque exécution, réussie ou non (pour n'alerter qu'en cas d'échec :
-    # remplacer par « needs.tests.result == 'failure' »)
-    if: ${{ !cancelled() }}
+    # Envoyé à chaque exécution hors Pull Request, réussie ou non (pour n'alerter
+    # qu'en cas d'échec : ajouter « needs.tests.result == 'failure' »)
+    if: ${{ !cancelled() && github.event_name != 'pull_request' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
 
