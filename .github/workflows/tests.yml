@@ -99,10 +99,11 @@ jobs:
         with:
           path: allure-report
 
-      # Autres environnements et Pull Requests : le rapport est téléchargeable dans le résumé
-      # de l'exécution, pour ne pas mélanger leur historique avec celui de la recette
+      # Tous les cas : une copie du rapport est téléchargeable dans le résumé de l'exécution.
+      # C'est le seul rapport pour les autres environnements et les Pull Requests,
+      # et une copie de secours pour la recette si la mise en ligne échoue.
       - name: Joindre le rapport à l'exécution (${{ env.ENVIRONNEMENT }})
-        if: ${{ !cancelled() && (env.ENVIRONNEMENT != 'recette' || github.event_name == 'pull_request') }}
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7
         with:
           # Pull Request : « rapport-allure-pr-<numéro> » ; sinon : « rapport-allure-<environnement> »
@@ -152,7 +153,11 @@ jobs:
 
     env:
       ENVIRONNEMENT: ${{ inputs.environnement || 'recette' }}
-      RESULTAT: ${{ needs.tests.result == 'success' && '✅ Réussite' || '❌ Échec' }}
+      # Réussite seulement si les tests passent ET si le rapport est en ligne
+      # (« skipped » = publication non prévue, par exemple en preprod : ce n'est pas un échec)
+      RESULTAT: ${{ needs.tests.result == 'success' && (needs.publication.result == 'success' || needs.publication.result == 'skipped') && '✅ Réussite' || '❌ Échec' }}
+      ETAT_TESTS: ${{ needs.tests.result == 'success' && '✅' || '❌' }}
+      ETAT_PUBLICATION: ${{ needs.publication.result == 'success' && '✅' || needs.publication.result == 'skipped' && '➖ (non publié pour cet environnement)' || '❌' }}
 
     steps:
       # Action tierce : épinglée sur un commit précis (v22) plutôt que sur une étiquette,
@@ -170,9 +175,11 @@ jobs:
           subject: '${{ env.RESULTAT }} - Tests Cypress (${{ env.ENVIRONNEMENT }})'
           body: |
             Résultat : ${{ env.RESULTAT }}
+            Tests : ${{ env.ETAT_TESTS }}
+            Rapport en ligne : ${{ env.ETAT_PUBLICATION }}
             Environnement : ${{ env.ENVIRONNEMENT }}
             Déclencheur : ${{ github.event_name }}
             Commit : ${{ github.sha }}
 
-            Rapport Allure : ${{ env.ENVIRONNEMENT == 'recette' && needs.publication.outputs.url_rapport || 'à télécharger dans le détail de l''exécution (Artifacts)' }}
+            Rapport Allure : ${{ needs.publication.result == 'success' && needs.publication.outputs.url_rapport || 'à télécharger dans le détail de l''exécution (Artifacts)' }}
             Détail de l'exécution : ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
