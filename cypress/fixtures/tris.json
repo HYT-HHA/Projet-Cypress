@@ -1,0 +1,6 @@
+{
+  "nom de A à Z": { "valeur": "az", "critere": "nom", "ordre": "croissant" },
+  "nom de Z à A": { "valeur": "za", "critere": "nom", "ordre": "décroissant" },
+  "prix croissant": { "valeur": "lohi", "critere": "prix", "ordre": "croissant" },
+  "prix décroissant": { "valeur": "hilo", "critere": "prix", "ordre": "décroissant" }
+}
