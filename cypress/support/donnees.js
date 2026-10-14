@@ -16,3 +16,6 @@ export const avecProduit = (libelle, action) => avecDonnee('produits', libelle, 
 
 // « client standard » → { prenom, nom, codePostal }
 export const avecClient = (libelle, action) => avecDonnee('clients', libelle, action);
+
+// « prix croissant » → { valeur, critere, ordre }
+export const avecTri = (libelle, action) => avecDonnee('tris', libelle, action);
