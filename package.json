@@ -46,7 +46,7 @@
     "globals": "^17.13.0"
   },
   "allowScripts": {
-    "cypress@16.1.0": true,
-    "esbuild@0.28.2": true
+    "cypress": true,
+    "esbuild": true
   }
 }
