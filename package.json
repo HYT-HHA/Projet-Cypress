@@ -18,7 +18,8 @@
     "clean:results": "node -e \"require('fs').rmSync('allure-results', { recursive: true, force: true })\"",
     "prereport:generate": "node -e \"require('fs').rmSync('allure-report', { recursive: true, force: true })\"",
     "report:generate": "allure generate",
-    "report:open": "allure open"
+    "report:open": "allure open",
+    "lint": "eslint ."
   },
   "cypress-cucumber-preprocessor": {
     "stepDefinitions": [
@@ -34,11 +35,15 @@
   "devDependencies": {
     "@badeball/cypress-cucumber-preprocessor": "^28.0.1",
     "@bahmutov/cypress-esbuild-preprocessor": "^2.2.8",
+    "@eslint/js": "^10.0.1",
     "allure": "^3.20.1",
     "allure-cypress": "^3.13.0",
     "cypress": "^16.1.0",
     "cypress-on-fix": "^1.1.0",
-    "esbuild": "^0.28.2"
+    "esbuild": "^0.28.2",
+    "eslint": "^10.12.0",
+    "eslint-plugin-cypress": "^7.0.2",
+    "globals": "^17.13.0"
   },
   "allowScripts": {
     "cypress@16.1.0": true,
