@@ -33,18 +33,26 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  tests:
-    name: Tests (${{ inputs.environnement || 'recette' }})
+  # Parallélisation : les fichiers de tests sont répartis entre 2 machines qui tournent en même temps
+  # (répartition faite par cypress.config.js, à partir de PARTIE et NB_PARTIES)
+  tests-partie:
+    name: Tests partie ${{ matrix.partie }}/2 (${{ inputs.environnement || 'recette' }})
     # Version d'Ubuntu fixée (pas « ubuntu-latest ») : on choisit quand migrer,
     # après avoir testé, au lieu de subir les changements de GitHub
     runs-on: ubuntu-24.04
     timeout-minutes: 15
 
+    strategy:
+      # Si une partie échoue, l'autre continue : on veut le résultat de tous les tests
+      fail-fast: false
+      matrix:
+        partie: [1, 2]
+
     env:
       # Push et planification : recette ; lancement manuel : l'environnement choisi
       ENVIRONNEMENT: ${{ inputs.environnement || 'recette' }}
-      # Adresse du rapport publié sur GitHub Pages (seul le rapport de recette y est publié)
-      URL_RAPPORT: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+      PARTIE: ${{ matrix.partie }}
+      NB_PARTIES: 2
 
     steps:
       - name: Récupérer le code du projet
@@ -70,8 +78,69 @@ jobs:
           # Le secret GitHub est transmis à Cypress, qui le lit avec cy.env(['motDePasse'])
           CYPRESS_motDePasse: ${{ secrets.MOT_DE_PASSE }}
 
-      # Les étapes suivantes tournent même si des tests ont échoué (!cancelled()) :
-      # c'est justement quand il y a des échecs que le rapport est le plus utile.
+      # Résultats bruts de cette partie, regroupés ensuite par le job « rapport »
+      # (même si des tests ont échoué : c'est là que le rapport est le plus utile)
+      - name: Transmettre les résultats de la partie ${{ matrix.partie }}
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: resultats-allure-partie-${{ matrix.partie }}
+          path: allure-results
+          if-no-files-found: error
+          retention-days: 1
+
+  # Synthèse des parties : c'est ce job, nommé « Tests (recette) », que la protection de main exige.
+  # Il réussit seulement si toutes les parties ont réussi.
+  tests:
+    name: Tests (${{ inputs.environnement || 'recette' }})
+    needs: tests-partie
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+
+    steps:
+      - name: Vérifier que toutes les parties ont réussi
+        run: |
+          echo "Résultat des parties : ${{ needs.tests-partie.result }}"
+          test "${{ needs.tests-partie.result }}" = "success"
+
+  # Regroupe les résultats des parties en un seul rapport Allure
+  rapport:
+    name: Rapport Allure
+    needs: tests-partie
+    # Même si des tests ont échoué : c'est justement là que le rapport est le plus utile
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    env:
+      ENVIRONNEMENT: ${{ inputs.environnement || 'recette' }}
+      # Adresse du rapport publié sur GitHub Pages (seul le rapport de recette y est publié)
+      URL_RAPPORT: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+
+    steps:
+      - name: Récupérer le code du projet
+        uses: actions/checkout@v7
+
+      - name: Installer Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Installer les dépendances
+        run: npm ci
+        env:
+          # Allure n'a pas besoin du navigateur de Cypress : on évite son téléchargement
+          CYPRESS_INSTALL_BINARY: 0
+
+      - name: Récupérer les résultats de toutes les parties
+        uses: actions/download-artifact@v8
+        with:
+          pattern: resultats-allure-partie-*
+          # Les résultats des parties sont fusionnés dans un seul dossier
+          merge-multiple: true
+          path: allure-results
 
       # L'historique est stocké avec le rapport publié : on le récupère avant de générer
       # le nouveau rapport. Au tout premier lancement, il n'existe pas encore.
@@ -112,6 +181,7 @@ jobs:
           retention-days: 30
 
   # Relecture automatique du code par ESLint, en parallèle des tests
+  # (sans « needs » : démarre en même temps que les parties de tests)
   qualite:
     name: Qualité du code (ESLint)
     # Inutile la nuit : le code n'a pas changé depuis le dernier push
@@ -140,7 +210,7 @@ jobs:
 
   publication:
     name: Publication du rapport
-    needs: tests
+    needs: rapport
     # Publié même si des tests ont échoué, mais seulement pour la recette, hors Pull Request
     if: ${{ !cancelled() && (inputs.environnement || 'recette') == 'recette' && github.event_name != 'pull_request' }}
     runs-on: ubuntu-24.04
@@ -171,7 +241,7 @@ jobs:
 
   notification:
     name: Notification par e-mail
-    needs: [tests, publication]
+    needs: [tests, rapport, publication]
     # Envoyé à chaque exécution hors Pull Request, réussie ou non (pour n'alerter
     # qu'en cas d'échec : ajouter « needs.tests.result == 'failure' »)
     if: ${{ !cancelled() && github.event_name != 'pull_request' }}

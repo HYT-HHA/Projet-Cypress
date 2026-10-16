@@ -1,3 +1,5 @@
+const fs = require('node:fs');
+const path = require('node:path');
 const { defineConfig } = require('cypress');
 const createBundler = require('@bahmutov/cypress-esbuild-preprocessor');
 const { addCucumberPreprocessorPlugin } = require('@badeball/cypress-cucumber-preprocessor');
@@ -7,6 +9,30 @@ const cypressOnFix = require('cypress-on-fix');
 const environnements = require('./cypress/config/environnements.json');
 
 const ENVIRONNEMENT_PAR_DEFAUT = 'recette';
+
+// Parallélisation : avec PARTIE=1 et NB_PARTIES=2 (variables d'environnement, posées par la CI),
+// cette machine ne lance qu'une partie des fichiers .feature. Sans ces variables : tout est lancé.
+// Répartition « à tour de rôle » sur la liste triée : fichier 1 → partie 1, fichier 2 → partie 2,
+// fichier 3 → partie 1… Chaque fichier est lancé par une seule machine, aucun n'est oublié.
+function repartirLesTests(config) {
+  const { PARTIE, NB_PARTIES } = process.env;
+  if (!PARTIE && !NB_PARTIES) return;
+
+  const partie = Number(PARTIE);
+  const nbParties = Number(NB_PARTIES);
+  if (!Number.isInteger(nbParties) || nbParties < 1 || !Number.isInteger(partie) || partie < 1 || partie > nbParties) {
+    throw new Error(`Répartition invalide : PARTIE=${PARTIE}, NB_PARTIES=${NB_PARTIES}.`);
+  }
+
+  const tousLesFichiers = fs.globSync(config.specPattern, { cwd: config.projectRoot }).sort();
+  const fichiersDeCettePartie = tousLesFichiers.filter((_, index) => index % nbParties === partie - 1);
+  if (fichiersDeCettePartie.length === 0) {
+    throw new Error(`Partie ${partie}/${nbParties} : aucun fichier de test à lancer.`);
+  }
+
+  console.log(`Partie ${partie}/${nbParties} : ${fichiersDeCettePartie.join(', ')}`);
+  config.specPattern = fichiersDeCettePartie.map((fichier) => path.join(config.projectRoot, fichier));
+}
 
 module.exports = defineConfig({
   e2e: {
@@ -35,6 +61,9 @@ module.exports = defineConfig({
         );
       }
       config.baseUrl = environnement.baseUrl;
+
+      // Avant Cucumber, qui filtre ensuite les fichiers retenus selon les tags
+      repartirLesTests(config);
 
       // Permet à Cucumber et Allure d'écouter les mêmes événements sans s'écraser
       const on = cypressOnFix(cypressOn);
