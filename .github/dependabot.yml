@@ -1,0 +1,27 @@
+# Dependabot : GitHub vérifie chaque semaine si des mises à jour existent
+# et ouvre lui-même une Pull Request pour chacune (testée par la CI avant fusion)
+version: 2
+updates:
+  # Paquets npm (Cypress, Cucumber, Allure, ESLint…)
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Europe/Paris
+    # Pas plus de 5 PR ouvertes en même temps, pour ne pas être submergée
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: 'Dépendances npm'
+
+  # Actions utilisées par le workflow (checkout, setup-node, envoi d'e-mail…)
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Europe/Paris
+    commit-message:
+      prefix: 'Actions GitHub'
