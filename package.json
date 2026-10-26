@@ -36,7 +36,7 @@
     "@badeball/cypress-cucumber-preprocessor": "^28.0.1",
     "@bahmutov/cypress-esbuild-preprocessor": "^2.2.8",
     "@eslint/js": "^10.0.1",
-    "allure": "^3.20.1",
+    "allure": "^3.22.0",
     "allure-cypress": "^3.13.0",
     "cypress": "^16.1.1",
     "cypress-on-fix": "^1.1.0",
